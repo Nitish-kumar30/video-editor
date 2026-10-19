@@ -1,0 +1,20 @@
+# dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# your videos and edits live here — never commit them
+projects/
+
+# test output
+tests/.output/
+
+# env / OS / editor
+.env*.local
+.DS_Store
+Thumbs.db
+*.log
