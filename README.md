@@ -130,6 +130,7 @@ private and the repository stays small. A good routine:
 | A phone video (HEVC/iPhone) shows a message about a preview | Normal: browsers can't always play HEVC, so a 720p preview copy is made in the background. Exports always use the original, full-quality file. |
 | The video won't play at all | Use Chrome or Edge. Very unusual formats: convert once with any converter to MP4, or let the preview finish. |
 | “edits.json has a typo” banner | Someone (or an AI) saved invalid JSON. Fix the file (often a missing comma) — the editor reloads it automatically. |
+| iPhone HDR video looks a bit washed out after export | Exports are standard (SDR) MP4s and v1 doesn't tone-map HDR. On the iPhone, set Camera → Formats → *Most Compatible* or turn off *HDR Video* for clips you plan to edit. |
 | Export failed | The Export window shows the last FFmpeg messages. `npm run render -- <id>` in a terminal shows the same. |
 
 ## 7. Defaults and decisions (so nothing is a surprise)
