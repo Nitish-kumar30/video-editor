@@ -1,0 +1,19 @@
+---
+description: ClipForge — how to edit videos (edits.json) and how the app is built
+alwaysApply: true
+---
+
+Read `CLAUDE.md` in the repository root before making changes. It is the full guide.
+
+Short version:
+- To edit a video, change `projects/<projectId>/edits.json` (the most recently modified one if
+  the user doesn't say). The open editor reloads it within ~2 seconds. Never edit its `source` block.
+- Times are seconds on the ORIGINAL video (strings like "1:20" are fine). Fades and music use the
+  output timeline. `cuts` are ranges to REMOVE.
+- Positions/sizes are normalized 0–1 of the source frame (x,y = top-left). 9:16 crop on W×H:
+  `w = (9/16)*H/W, h = 1, x = (1-w)/2, y = 0`.
+- Logos/music must be copied into the project's `assets/` folder and referenced as "assets/<file>".
+- Render: `npm run render -- <projectId>`. Test: `npm test`. Quick test project: `npm run sample`.
+- New effects: `lib/schema.ts` → `lib/render.ts` → `components/editor/Stage.tsx` → `Inspector.tsx` → tests.
+- The browser never processes video; FFmpeg runs server-side with an args array (no shell) and
+  relative paths. No cloud, no network calls, no database.

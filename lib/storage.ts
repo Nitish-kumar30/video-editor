@@ -120,7 +120,7 @@ export async function createProjectDir(name: string): Promise<string> {
     const id = i === 1 ? base : `${base}-${i}`;
     try {
       await fsp.mkdir(path.join(PROJECTS_DIR, id));
-      for (const sub of ["assets", "exports", ".tmp"]) await fsp.mkdir(path.join(PROJECTS_DIR, id, sub), { recursive: true });
+      for (const sub of ["assets", "exports", ".tmp"]) await fsp.mkdir(path.join(/*turbopackIgnore: true*/ PROJECTS_DIR, id, sub), { recursive: true });
       return id;
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
@@ -142,7 +142,7 @@ export interface ProjectSummary {
 export async function listProjects(): Promise<ProjectSummary[]> {
   let entries: fs.Dirent[] = [];
   try {
-    entries = await fsp.readdir(PROJECTS_DIR, { withFileTypes: true });
+    entries = await fsp.readdir(/*turbopackIgnore: true*/ PROJECTS_DIR, { withFileTypes: true });
   } catch {
     return [];
   }
@@ -184,7 +184,8 @@ export async function listProjects(): Promise<ProjectSummary[]> {
 }
 
 export async function deleteProject(id: string): Promise<void> {
-  await fsp.rm(projectDir(id), { recursive: true, force: true });
+  // Retries help on Windows, where a file that was just streamed can stay locked for a moment.
+  await fsp.rm(projectDir(id), { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }
 
 /** List rendered files in exports/, newest first. */

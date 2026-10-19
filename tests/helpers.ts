@@ -50,13 +50,13 @@ export function meanRgb(buf: Buffer) {
   return { r: r / n, g: g / n, b: b / n };
 }
 
-/** Sum of absolute differences between horizontal neighbours: high for sharp images, low for blurred ones. */
+/** Mean squared difference between horizontal neighbours: high for sharp images, low for blurred ones. */
 export function edgeEnergy(buf: Buffer, width: number): number {
   let e = 0;
   const stride = width * 3;
   for (let i = 0; i + 3 < buf.length; i += 3) {
     if ((i + 3) % stride === 0) continue;
-    e += Math.abs(buf[i] - buf[i + 3]) + Math.abs(buf[i + 1] - buf[i + 4]) + Math.abs(buf[i + 2] - buf[i + 5]);
+    e += (buf[i] - buf[i + 3]) ** 2 + (buf[i + 1] - buf[i + 4]) ** 2 + (buf[i + 2] - buf[i + 5]) ** 2;
   }
   return e / (buf.length / 3);
 }

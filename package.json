@@ -9,6 +9,7 @@
     "start": "node scripts/next.mjs start -H localhost",
     "new": "tsx scripts/new-project.ts",
     "render": "tsx scripts/render.ts",
+    "sample": "tsx scripts/sample.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

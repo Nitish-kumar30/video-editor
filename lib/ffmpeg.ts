@@ -3,6 +3,7 @@
  *
  * - ffmpegPath(): FFMPEG_PATH env var, or the binary shipped by the `ffmpeg-static` package.
  * - probe(): reads video info by parsing `ffmpeg -hide_banner -i <file>` output (no ffprobe needed).
+ * (The turbopackIgnore comments only silence Next.js build warnings about file tracing.)
  * - runFfmpeg(): spawns FFmpeg with an args ARRAY (no shell, so paths with spaces are safe)
  *   and reports progress from `-progress pipe:1`.
  */
@@ -82,7 +83,7 @@ export function parseProbeOutput(text: string): ProbeResult {
 /** Probe a media file. `file` may be relative to `cwd`. */
 export async function probe(file: string, cwd?: string): Promise<ProbeResult> {
   const text = await new Promise<string>((resolve, reject) => {
-    const proc = spawn(ffmpegPath(), ["-hide_banner", "-nostdin", "-i", file], { cwd, windowsHide: true });
+    const proc = spawn(/*turbopackIgnore: true*/ ffmpegPath(), ["-hide_banner", "-nostdin", "-i", file], { cwd, windowsHide: true });
     let err = "";
     proc.stderr.on("data", (d) => (err += d.toString()));
     proc.on("error", reject);
@@ -103,7 +104,7 @@ export async function hasFilter(name: string): Promise<boolean> {
     filterCache.set(
       bin,
       new Promise((resolve) => {
-        const proc = spawn(bin, ["-hide_banner", "-filters"], { windowsHide: true });
+        const proc = spawn(/*turbopackIgnore: true*/ bin, ["-hide_banner", "-filters"], { windowsHide: true });
         let out = "";
         proc.stdout.on("data", (d) => (out += d.toString()));
         proc.on("error", () => resolve(new Set()));
@@ -144,7 +145,7 @@ export interface RunOptions {
 export function runFfmpeg(args: string[], opts: RunOptions = {}): Promise<void> {
   return new Promise((resolve, reject) => {
     const fullArgs = ["-hide_banner", "-nostdin", "-progress", "pipe:1", "-nostats", ...args];
-    const proc = spawn(ffmpegPath(), fullArgs, { cwd: opts.cwd, windowsHide: true });
+    const proc = spawn(/*turbopackIgnore: true*/ ffmpegPath(), fullArgs, { cwd: opts.cwd, windowsHide: true });
     const tail: string[] = [];
     let stdoutBuf = "";
     let stderrBuf = "";
