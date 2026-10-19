@@ -4,9 +4,9 @@
   "private": true,
   "description": "ClipForge — a local, AI-customizable video editor (Next.js + FFmpeg)",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "node scripts/next.mjs dev -H localhost",
+    "build": "node scripts/next.mjs build",
+    "start": "node scripts/next.mjs start -H localhost",
     "new": "tsx scripts/new-project.ts",
     "render": "tsx scripts/render.ts",
     "test": "vitest run",
