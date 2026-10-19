@@ -1,14 +1,14 @@
 # dependencies
-node_modules/
+/node_modules/
 
 # Next.js
-.next/
-out/
+/.next/
+/out/
 next-env.d.ts
 *.tsbuildinfo
 
 # your videos and edits live here — never commit them
-projects/
+/projects/
 
 # test output
 tests/.output/
