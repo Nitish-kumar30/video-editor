@@ -66,6 +66,9 @@ Leave the terminal window open while you edit; press <kbd>Ctrl</kbd>+<kbd>C</kbd
 3. **Export**: click **Export** (top right), choose resolution/quality, **Start export**, then
    **Download**. Exports are also saved in `projects/<name>/exports/`.
 
+**Not sure what something does?** Rest the mouse on it for a moment — a help bubble explains
+it. The **?** button in the top bar switches these tips off and on.
+
 Everything saves automatically. **Undo/Redo**: <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>.
 
 ### Keyboard shortcuts

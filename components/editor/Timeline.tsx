@@ -164,7 +164,12 @@ export default function Timeline(props: TimelineProps) {
     <div ref={scrollRef} className="relative h-full overflow-x-auto overflow-y-auto bg-ink-900">
       <div ref={innerRef} className="relative min-h-full" style={{ width: innerW }}>
         {/* Ruler */}
-        <div className="sticky top-0 z-20 h-6 cursor-pointer border-b border-ink-700 bg-ink-850" onPointerDown={startScrub}>
+        <div
+          className="sticky top-0 z-20 h-6 cursor-pointer border-b border-ink-700 bg-ink-850"
+          onPointerDown={startScrub}
+          data-tip-title="Time ruler"
+          data-tip="Times of the ORIGINAL video. Click or drag here to move the playhead (red line)."
+        >
           {ticks.map((t) => (
             <div key={t} className="absolute top-0 h-full border-l border-ink-600" style={{ left: X(t) }}>
               <span className="ml-1 text-[10px] text-ink-300">{formatTime(t, decimals)}</span>
@@ -173,7 +178,12 @@ export default function Timeline(props: TimelineProps) {
         </div>
 
         {/* Video track: thumbnails + cuts + in/out */}
-        <div className="relative h-14 cursor-pointer border-b border-ink-700 bg-ink-800" onPointerDown={startScrub}>
+        <div
+          className="relative h-14 cursor-pointer border-b border-ink-700 bg-ink-800"
+          onPointerDown={startScrub}
+          data-tip-title="Video track"
+          data-tip={"Thumbnails of your video. Click or drag to move the playhead.\nRed-striped parts are cut out of the export. Yellow shading is the range between your In and Out marks."}
+        >
           {thumbsUrl && (
             <div
               className="absolute top-1 bottom-1 rounded-sm opacity-90"
@@ -188,7 +198,8 @@ export default function Timeline(props: TimelineProps) {
             return (
               <div
                 key={c.id}
-                title={`Cut ${formatTime(c.start)} – ${formatTime(c.end)} (removed)`}
+                data-tip-title={`Cut ${formatTime(c.start)} – ${formatTime(c.end)} (removed)`}
+                data-tip="This part is removed from the export. Drag to move it, drag its edges to change it; press Delete (or use the panel on the right) to keep this part after all."
                 className={`cut-hatch absolute top-0 bottom-0 cursor-grab border-x-2 ${sel ? "border-white" : "border-red-400"}`}
                 style={{ left: X(c.start), width: Math.max(3, (c.end - c.start) * pps) }}
                 onPointerDown={(e) => {
@@ -208,7 +219,7 @@ export default function Timeline(props: TimelineProps) {
         </div>
 
         {/* Item lanes */}
-        {lanes.length === 0 && <div className="px-3 py-2 text-xs text-ink-400">Blurs, boxes, texts and logos you add show up here as bars.</div>}
+        {lanes.length === 0 && <div className="px-3 py-2 text-xs text-ink-400" data-tip="Each blur, pixelate, box, text and logo gets its own row. The bar shows when it is visible.">Blurs, boxes, texts and logos you add show up here as bars.</div>}
         {lanes.map((l, i) => {
           const sel = isSel(l.kind, l.id);
           return (
@@ -221,7 +232,8 @@ export default function Timeline(props: TimelineProps) {
                   setSelection({ kind: l.kind, id: l.id } as Selection);
                   startBarDrag(e, l.start, l.end, "move", setRange(l.kind, l.id));
                 }}
-                title={`${l.label}: ${formatTime(l.start)} – ${formatTime(l.end)}`}
+                data-tip-title={`${l.label} · ${formatTime(l.start)} – ${formatTime(l.end)}`}
+                data-tip="When this item is visible (times of the original video). Drag the bar to move it in time; drag its left or right edge to change when it starts or ends. Edges snap to the playhead and In/Out marks."
               >
                 <span className="pointer-events-none truncate px-2">{l.label}</span>
                 <Edge side="start" onDown={(e) => startBarDrag(e, l.start, l.end, "start", setRange(l.kind, l.id))} />
@@ -244,6 +256,7 @@ function Edge({ side, onDown }: { side: "start" | "end"; onDown: (e: React.Point
   return (
     <div
       className={`absolute top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/40 ${side === "start" ? "left-0" : "right-0"}`}
+      data-tip={side === "start" ? "Drag to change the start time." : "Drag to change the end time."}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
         e.stopPropagation();

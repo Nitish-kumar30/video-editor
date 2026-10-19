@@ -71,6 +71,7 @@ projects/<projectId>/
 | `app/editor/[id]/page.tsx` | Editor page → `components/editor/Editor.tsx`. |
 | `app/api/projects/...` | REST API (see below). |
 | `components/editor/` | `Editor` (layout, playback, shortcuts), `Stage` (video + overlay previews, drawing, handles), `Timeline`, `Inspector`, `Toolbar`, `ExportDialog`, `useProject` (undo/redo, autosave, live sync), `geometry` (rect math). |
+| `components/HoverTips.tsx` | Hover help: any element with `data-tip="…"` (and optional `data-tip-title`) shows an explanation after the mouse rests on it ~0.7 s. Switched on/off with the **?** button in the editor. |
 | `scripts/` | CLI: `new-project.ts`, `render.ts`, `sample.ts`; `next.mjs` starts Next with telemetry off. |
 | `public/fonts/DejaVuSans.ttf` | The one font used by the preview **and** FFmpeg (so they match). |
 | `tests/` | Vitest: schema, timeline, probe parsing, filter-graph strings, and real renders. |
@@ -234,6 +235,8 @@ npm run build
 4. **`components/editor/Inspector.tsx`** — fields for the new properties (use `update(fn, coalesceKey)`
    so edits are undoable and typing coalesces into one step). Add a timeline lane in
    `Timeline.tsx` if it has a time range, and a tool in `Toolbar.tsx` if it's drawn.
+   Give every new control a plain-language `data-tip` (the user relies on these hover
+   explanations); Inspector rows/sections get theirs from `ROW_TIPS` / `SECTION_TIPS`.
 5. **Tests** — string test + real render. Update this file's schema section (and AGENTS.md).
 
 ## 8. Gotchas (learned the hard way)

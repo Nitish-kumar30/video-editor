@@ -22,7 +22,9 @@ import {
   Loader2,
   Keyboard,
   ZoomIn,
+  HelpCircle,
 } from "lucide-react";
+import { setTipsEnabled, tipsEnabled } from "@/components/HoverTips";
 import { clamp, formatTime, newId, round3, type ImageItem, type Region, type TextItem } from "@/lib/schema";
 import { keepSegments, outputDuration, skipCut, sourceToOutput } from "@/lib/timeline";
 import { useProject } from "./useProject";
@@ -52,6 +54,8 @@ export default function Editor({ id }: { id: string }) {
   const [showExport, setShowExport] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const [tipsOn, setTipsOn] = useState(true);
+  useEffect(() => setTipsOn(tipsEnabled()), []);
 
   const duration = edits?.source.duration ?? 0;
   const fps = edits?.source.fps ?? 30;
@@ -361,36 +365,53 @@ export default function Editor({ id }: { id: string }) {
     <div className="flex h-screen flex-col overflow-hidden">
       {/* Top bar */}
       <header className="flex h-12 shrink-0 items-center gap-3 border-b border-ink-700 bg-ink-900 px-3">
-        <Link href="/" className="rounded p-1.5 text-ink-300 hover:bg-ink-700 hover:text-white" title="All projects">
+        <Link href="/" className="rounded p-1.5 text-ink-300 hover:bg-ink-700 hover:text-white" data-tip="Back to the home page with all your projects. Your work is already saved.">
           <ArrowLeft size={18} />
         </Link>
         <div className="min-w-0">
           <div className="truncate font-semibold">{edits.name || id}</div>
         </div>
-        <div className={`flex items-center gap-1 text-xs ${statusView.cls}`} title={`projects/${id}/edits.json`}>
+        <div className={`flex items-center gap-1 text-xs ${statusView.cls}`} data-tip-title="Save status"
+          data-tip={`Every change is saved automatically to projects/${id}/edits.json.\n“Synced from edits.json” means the file was changed outside the app (by you or an AI assistant) and the editor reloaded it — Ctrl+Z undoes that too.`}
+        >
           {statusView.icon}
           {statusView.text}
         </div>
         {project.jsonError && (
-          <div className="flex items-center gap-1 rounded bg-amber-900/60 px-2 py-0.5 text-xs text-amber-200" title={project.jsonError}>
+          <div className="flex items-center gap-1 rounded bg-amber-900/60 px-2 py-0.5 text-xs text-amber-200" data-tip={`The editor keeps showing the last good version until the file is valid again.\n\n${project.jsonError}`}>
             <CircleAlert size={14} /> edits.json has a typo — fix it and the editor will reload it
           </div>
         )}
         <div className="flex-1" />
         {hint && <div className="rounded bg-ink-700 px-2 py-1 text-xs text-ink-100">{hint}</div>}
-        <button className="rounded p-1.5 text-ink-300 hover:bg-ink-700 hover:text-white disabled:opacity-30" onClick={undo} disabled={!project.canUndo} title="Undo (Ctrl+Z)">
+        <button className="rounded p-1.5 text-ink-300 hover:bg-ink-700 hover:text-white disabled:opacity-30" onClick={undo} disabled={!project.canUndo} data-tip-title="Undo (Ctrl+Z)" data-tip="Step back one change. A whole drag or a burst of typing counts as one step.">
           <Undo2 size={18} />
         </button>
-        <button className="rounded p-1.5 text-ink-300 hover:bg-ink-700 hover:text-white disabled:opacity-30" onClick={redo} disabled={!project.canRedo} title="Redo (Ctrl+Shift+Z)">
+        <button className="rounded p-1.5 text-ink-300 hover:bg-ink-700 hover:text-white disabled:opacity-30" onClick={redo} disabled={!project.canRedo} data-tip-title="Redo (Ctrl+Shift+Z)" data-tip="Bring back the change you just undid.">
           <Redo2 size={18} />
         </button>
         <div className="relative">
-          <button className="rounded p-1.5 text-ink-300 hover:bg-ink-700 hover:text-white" onClick={() => setShowKeys((s) => !s)} title="Keyboard shortcuts">
+          <button className="rounded p-1.5 text-ink-300 hover:bg-ink-700 hover:text-white" onClick={() => setShowKeys((s) => !s)} data-tip="Show all keyboard shortcuts.">
             <Keyboard size={18} />
           </button>
           {showKeys && <Shortcuts onClose={() => setShowKeys(false)} />}
         </div>
-        <button className="flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-strong" onClick={() => setShowExport(true)}>
+        <button
+          className={`rounded p-1.5 hover:bg-ink-700 hover:text-white ${tipsOn ? "text-accent" : "text-ink-400"}`}
+          onClick={() => {
+            setTipsEnabled(!tipsOn);
+            setTipsOn(!tipsOn);
+            flash(tipsOn ? "Help tips off — click ? to turn them back on" : "Help tips on — rest the mouse on anything to see what it does");
+          }}
+          data-tip-title="Help tips"
+          data-tip="Rest the mouse on any part of the editor to see what it does. Click to switch these tips off or on."
+        >
+          <HelpCircle size={18} />
+        </button>
+        <button className="flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-strong" onClick={() => setShowExport(true)}
+          data-tip-title="Export"
+          data-tip="Make the final MP4: FFmpeg applies all cuts, blurs, text, logo, crop and audio settings to the original full-quality video. You can download it when it's done."
+        >
           <Download size={16} /> Export
         </button>
       </header>
@@ -440,35 +461,36 @@ export default function Editor({ id }: { id: string }) {
 
           {/* Transport */}
           <div className="flex h-11 shrink-0 items-center gap-2 border-t border-ink-700 bg-ink-900 px-3 text-sm">
-            <button className="rounded p-1.5 hover:bg-ink-700" onClick={() => step(-1)} title="Previous frame (←)">
+            <button className="rounded p-1.5 hover:bg-ink-700" onClick={() => step(-1)} data-tip-title="Previous frame (←)" data-tip="Go back one frame. Shift+← jumps back 1 second.">
               <StepBack size={16} />
             </button>
-            <button className="rounded-full bg-ink-700 p-2 hover:bg-ink-600" onClick={togglePlay} title="Play / pause (Space)">
+            <button className="rounded-full bg-ink-700 p-2 hover:bg-ink-600" onClick={togglePlay} data-tip-title="Play / pause (Space)" data-tip="Play the video with all your edits previewed on top.">
               {playing ? <Pause size={16} /> : <Play size={16} />}
             </button>
-            <button className="rounded p-1.5 hover:bg-ink-700" onClick={() => step(1)} title="Next frame (→)">
+            <button className="rounded p-1.5 hover:bg-ink-700" onClick={() => step(1)} data-tip-title="Next frame (→)" data-tip="Go forward one frame. Shift+→ jumps ahead 1 second.">
               <StepForward size={16} />
             </button>
-            <div className="font-mono text-xs">
+            <div className="font-mono text-xs" data-tip-title="Playhead time" data-tip="Where you are in the ORIGINAL video / its full length. All item times use this clock.">
               <span className="text-white">{formatTime(currentTime)}</span>
               <span className="text-ink-400"> / {formatTime(duration)}</span>
             </div>
-            <div className="hidden font-mono text-[11px] text-ink-400 lg:block" title="Position in the exported video">
+            <div className="hidden font-mono text-[11px] text-ink-400 lg:block" data-tip-title="Exported video time" data-tip="Where this moment will be in the exported video, after the cuts are removed / how long the export will be. “— (cut)” means this moment is cut out.">
               out {outTime === null ? "— (cut)" : formatTime(outTime)} / {formatTime(outputDuration(segs))}
             </div>
             <div className="mx-2 h-5 w-px bg-ink-700" />
-            <button className="rounded px-2 py-1 text-xs hover:bg-ink-700" onClick={() => setInMark(round3(currentTime))} title="Set In mark (I)">
+            <button className="rounded px-2 py-1 text-xs hover:bg-ink-700" onClick={() => setInMark(round3(currentTime))} data-tip-title="In mark (I)" data-tip="Mark the START of a range at the playhead. With In and Out set you can cut that range out (C), and new blurs/texts use that range.">
               In {inMark !== null && <span className="text-yellow-300">{formatTime(inMark, 1)}</span>}
             </button>
-            <button className="rounded px-2 py-1 text-xs hover:bg-ink-700" onClick={() => setOutMark(round3(currentTime))} title="Set Out mark (O)">
+            <button className="rounded px-2 py-1 text-xs hover:bg-ink-700" onClick={() => setOutMark(round3(currentTime))} data-tip-title="Out mark (O)" data-tip="Mark the END of a range at the playhead.">
               Out {outMark !== null && <span className="text-yellow-300">{formatTime(outMark, 1)}</span>}
             </button>
-            <button className="flex items-center gap-1 rounded bg-red-900/60 px-2 py-1 text-xs text-red-100 hover:bg-red-800" onClick={cutInOut} title="Cut out the part between In and Out (C)">
+            <button className="flex items-center gap-1 rounded bg-red-900/60 px-2 py-1 text-xs text-red-100 hover:bg-red-800" onClick={cutInOut} data-tip-title="Cut In→Out (C)" data-tip="Remove the part between the In and Out marks from the export. It shows red-striped on the timeline; click it there to adjust or remove the cut. The original file is never changed.">
               <Scissors size={14} /> Cut In→Out
             </button>
             {(inMark !== null || outMark !== null) && (
               <button
                 className="rounded px-1 text-xs text-ink-400 hover:text-white"
+                data-tip="Remove the In and Out marks."
                 onClick={() => {
                   setInMark(null);
                   setOutMark(null);
@@ -477,12 +499,14 @@ export default function Editor({ id }: { id: string }) {
                 clear
               </button>
             )}
-            <label className="ml-2 flex items-center gap-1 text-xs text-ink-300" title="Jump over cut parts while playing">
+            <label className="ml-2 flex items-center gap-1 text-xs text-ink-300" data-tip-title="Skip cuts while previewing" data-tip={"On: playback jumps over the red cut parts, so you watch the video as it will be exported.\nOff: play everything, including the parts that will be removed."}>
               <input type="checkbox" checked={skipCuts} onChange={(e) => setSkipCuts(e.target.checked)} /> Skip cuts while previewing
             </label>
             <div className="flex-1" />
-            <ZoomIn size={14} className="text-ink-400" />
-            <input type="range" min={1} max={60} step={0.5} value={zoom} onChange={(e) => setZoom(parseFloat(e.target.value))} className="w-28" title="Timeline zoom (Ctrl + wheel)" />
+            <div className="flex items-center gap-2" data-tip-title="Timeline zoom" data-tip="Zoom into the timeline for precise edits; scroll sideways when zoomed. Ctrl + mouse wheel over the timeline zooms too.">
+              <ZoomIn size={14} className="text-ink-400" />
+              <input type="range" min={1} max={60} step={0.5} value={zoom} onChange={(e) => setZoom(parseFloat(e.target.value))} className="w-28" />
+            </div>
           </div>
         </main>
 

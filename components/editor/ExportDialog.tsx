@@ -99,14 +99,14 @@ export default function ExportDialog({
           <h2 className="flex items-center gap-2 font-semibold">
             <Film size={18} /> Export MP4
           </h2>
-          <button className="rounded p-1 text-ink-300 hover:bg-ink-700" onClick={onClose} title="Close">
+          <button className="rounded p-1 text-ink-300 hover:bg-ink-700" onClick={onClose} data-tip="Close this window. A running export keeps going in the background.">
             <X size={18} />
           </button>
         </div>
 
         <div className="space-y-3 p-4 text-sm">
           <div className="grid grid-cols-2 gap-3">
-            <label className="space-y-1">
+            <label className="space-y-1" data-tip-title="Resolution" data-tip="Height of the exported video in pixels. Original keeps the full size. 1080p is plenty for social media; 720p/480p make smaller files.">
               <span className="text-xs text-ink-300">Resolution</span>
               <select className="field" value={String(height)} disabled={running} onChange={(e) => setHeight(e.target.value === "null" ? null : (Number(e.target.value) as ExportHeight))}>
                 {EXPORT_HEIGHTS.map((h) => (
@@ -116,7 +116,7 @@ export default function ExportDialog({
                 ))}
               </select>
             </label>
-            <label className="space-y-1">
+            <label className="space-y-1" data-tip-title="Quality" data-tip="High looks best but makes a big file. Medium is a good balance. Small is easy to send by chat or email.">
               <span className="text-xs text-ink-300">Quality</span>
               <select className="field" value={quality} disabled={running} onChange={(e) => setQuality(e.target.value as Quality)}>
                 <option value="high">High (big file)</option>
@@ -125,7 +125,7 @@ export default function ExportDialog({
               </select>
             </label>
           </div>
-          <label className="block space-y-1">
+          <label className="block space-y-1" data-tip-title="File name" data-tip="Name of the MP4. It is saved in this project's exports folder; an existing file is never overwritten (a number is added).">
             <span className="text-xs text-ink-300">File name</span>
             <div className="flex items-center gap-1">
               <input className="field" value={filename} disabled={running} placeholder="my-video" onChange={(e) => setFilename(e.target.value)} />
@@ -137,7 +137,7 @@ export default function ExportDialog({
           </p>
 
           {job && (
-            <div className="rounded-lg bg-ink-900 p-3">
+            <div className="rounded-lg bg-ink-900 p-3" data-tip="Progress of the export. If it fails, the last messages from FFmpeg are shown here.">
               <div className="mb-2 flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1">
                   {running && <Loader2 size={12} className="animate-spin" />}
@@ -167,11 +167,15 @@ export default function ExportDialog({
 
           <div className="flex justify-end gap-2">
             {running ? (
-              <button className="rounded-md border border-ink-600 px-3 py-2 hover:bg-ink-700" onClick={cancel}>
+              <button className="rounded-md border border-ink-600 px-3 py-2 hover:bg-ink-700" onClick={cancel} data-tip="Stop this export. Nothing is saved.">
                 Cancel export
               </button>
             ) : (
-              <button className="rounded-md bg-accent px-4 py-2 font-medium text-white hover:bg-accent-strong" onClick={start}>
+              <button
+                className="rounded-md bg-accent px-4 py-2 font-medium text-white hover:bg-accent-strong"
+                onClick={start}
+                data-tip="Save your latest changes and start making the MP4 from the original, full-quality video. Same result as `npm run render`."
+              >
                 {job?.state === "done" ? "Export again" : "Start export"}
               </button>
             )}
@@ -183,13 +187,13 @@ export default function ExportDialog({
               <ul className="max-h-40 divide-y divide-ink-700 overflow-auto rounded border border-ink-700">
                 {exportsList.map((f) => (
                   <li key={f.name} className="flex items-center justify-between gap-2 px-2 py-1.5 text-xs">
-                    <a href={fileUrl(f.path)} target="_blank" rel="noreferrer" className="truncate hover:underline" title="Open in a new tab">
+                    <a href={fileUrl(f.path)} target="_blank" rel="noreferrer" className="truncate hover:underline" data-tip="Watch this export in a new browser tab.">
                       {f.name}
                     </a>
                     <span className="shrink-0 text-ink-400">
                       {fmtSize(f.size)} · {new Date(f.mtime).toLocaleString()}
                     </span>
-                    <a href={fileUrl(f.path, true)} className="shrink-0 rounded p-1 hover:bg-ink-700" title="Download">
+                    <a href={fileUrl(f.path, true)} className="shrink-0 rounded p-1 hover:bg-ink-700" data-tip="Download this MP4 to your Downloads folder.">
                       <Download size={14} />
                     </a>
                   </li>

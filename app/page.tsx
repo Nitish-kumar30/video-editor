@@ -108,6 +108,8 @@ export default function Home() {
             drag ? "border-accent bg-accent/10" : "border-ink-600 bg-ink-900 hover:border-ink-500"
           }`}
           onClick={() => !upload && inputRef.current?.click()}
+          data-tip-title="New project"
+          data-tip="Drop a video here or click to pick one. It is copied into the projects folder on this computer (nothing is uploaded to the internet) and the editor opens. Your original file is never changed."
           onDragOver={(e) => {
             e.preventDefault();
             setDrag(true);
@@ -168,7 +170,12 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {projects.map((p) => (
-              <div key={p.id} className="group relative overflow-hidden rounded-lg border border-ink-700 bg-ink-900 transition hover:border-ink-500">
+              <div
+                key={p.id}
+                className="group relative overflow-hidden rounded-lg border border-ink-700 bg-ink-900 transition hover:border-ink-500"
+                data-tip-title={p.name}
+                data-tip={`Click to open in the editor. Files are in projects/${p.id}/ (edits.json holds your edit, exports/ your MP4s).`}
+              >
                 <Link href={p.ready ? `/editor/${p.id}` : "#"} className="block">
                   <div
                     className="flex aspect-video items-center justify-center bg-ink-800"
@@ -189,7 +196,7 @@ export default function Home() {
                 </Link>
                 <button
                   className="absolute top-2 right-2 rounded bg-black/60 p-1.5 text-ink-200 opacity-0 transition group-hover:opacity-100 hover:bg-red-700 hover:text-white"
-                  title="Delete project"
+                  data-tip="Delete this project: its copy of the video, edits and exports. You will be asked to confirm. Your original file is not touched."
                   onClick={() => remove(p)}
                 >
                   <Trash2 size={14} />

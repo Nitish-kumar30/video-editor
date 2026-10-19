@@ -4,7 +4,7 @@
  * (audio, music, fades, export defaults) when nothing is selected.
  * Every change goes through `update`, so it is undoable and autosaved.
  */
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Trash2, Copy, Clock, Music, Upload, X } from "lucide-react";
 import { clamp, formatTime, newId, parseTime, round3, EXPORT_HEIGHTS, type Edits, type RegionType } from "@/lib/schema";
 import { keepSegments, outputDuration } from "@/lib/timeline";
@@ -39,21 +39,73 @@ export default function Inspector(props: InspectorProps) {
 // building blocks
 // ---------------------------------------------------------------------------
 
-function Section({ title, children, right }: { title: string; children: React.ReactNode; right?: React.ReactNode }) {
+// Hover help (components/HoverTips.tsx). Section tips are looked up by section title;
+// row tips by "Section title/Row label", falling back to "*/Row label".
+const SECTION_TIPS: Record<string, string> = {
+  Blur: "Softens everything inside the rectangle so it can't be read or recognized.",
+  Pixelate: "Turns the area inside the rectangle into big square blocks (mosaic).",
+  Box: "Covers the area completely with a solid color — the safest way to hide something.",
+  "Position (% of frame)": "Where the item sits on the ORIGINAL picture, in percent: X from the left edge, Y from the top. W and H are width and height.",
+  "Time (source)": "When the item is visible, in times of the ORIGINAL video (the same clock as the timeline ruler). Cuts don't change these times.",
+  Text: "Words shown on top of the video, using the same font as the export.",
+  "Image / logo": "A picture (e.g. your logo) placed on top of the video. Transparent PNGs look best.",
+  "Cut (removed part)": "This part of the original video is left out of the export.",
+  Crop: "Keeps only the part of the picture inside the frame. The export gets the frame's shape (e.g. 9:16 for phones).",
+  Project: "Settings for the whole video. Shown when nothing is selected.",
+  "Video fades (output)": "Fade the picture from/to black at the very start and end of the EXPORTED video (after cuts).",
+  Audio: "The sound of the original video.",
+  "Background music": "A music file mixed under the video. It starts at the beginning of the exported video.",
+  "Export defaults": "The settings the Export button starts with. You can still change them in the Export window.",
+};
+
+const ROW_TIPS: Record<string, string> = {
+  "*/Label": "An optional name (e.g. 'face', 'number plate'). Only for you — it is not shown in the export.",
+  "*/Strength": "How strong the effect is. Higher = blurrier / bigger blocks.",
+  "*/Start": "When it starts. Type a time like 1:23.5, or click the clock to use the playhead position.",
+  "*/End": "When it ends. Type a time like 1:23.5, or click the clock to use the playhead position.",
+  "Box/Color": "The color of the box.",
+  "Text/Size": "Font size, as a percentage of the video's height.",
+  "Text/Color": "Color of the letters.",
+  "Text/Background": "Draw a box behind the text so it's easy to read on any background.",
+  "Text/Bg opacity": "How see-through the box behind the text is. 0% = invisible, 100% = solid.",
+  "Image / logo/Width": "Width as a percentage of the video's width. The height follows the image's shape.",
+  "Image / logo/Opacity": "How see-through the image is. 100% = solid, lower = a watermark look.",
+  "Project/Name": "The project's name on the home page; also the default export file name.",
+  "Video fades (output)/Fade in": "Seconds to fade in from black at the start of the export. 0 = no fade.",
+  "Video fades (output)/Fade out": "Seconds to fade out to black at the end of the export. 0 = no fade.",
+  "Audio/Mute": "Remove the original sound completely (background music still plays).",
+  "Audio/Volume": "Loudness of the original sound. 100% = unchanged.",
+  "Audio/Fade in": "Seconds for the sound to fade in at the start of the export.",
+  "Audio/Fade out": "Seconds for the sound to fade out at the end of the export.",
+  "Background music/Volume": "Loudness of the music. Around 20–40% keeps voices understandable.",
+  "Background music/Loop": "Start the song again if it is shorter than the video.",
+  "Export defaults/Resolution": "Height of the exported video. Original keeps the full size; smaller = smaller file.",
+  "Export defaults/Quality": "High = best picture, big file. Small = more compression, easy to share.",
+};
+
+const SectionCtx = createContext("");
+
+function Section({ title, children, right, tip }: { title: string; children: React.ReactNode; right?: React.ReactNode; tip?: string }) {
   return (
-    <section className="mb-4">
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-[11px] font-semibold tracking-wider text-ink-300 uppercase">{title}</h3>
-        {right}
-      </div>
-      <div className="space-y-2">{children}</div>
-    </section>
+    <SectionCtx.Provider value={title}>
+      <section className="mb-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="cursor-help text-[11px] font-semibold tracking-wider text-ink-300 uppercase" data-tip-title={title} data-tip={tip ?? SECTION_TIPS[title]}>
+            {title}
+          </h3>
+          {right}
+        </div>
+        <div className="space-y-2">{children}</div>
+      </section>
+    </SectionCtx.Provider>
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children, tip }: { label: string; children: React.ReactNode; tip?: string }) {
+  const section = useContext(SectionCtx);
+  const help = tip ?? ROW_TIPS[`${section}/${label}`] ?? ROW_TIPS[`*/${label}`];
   return (
-    <label className="flex items-center gap-2">
+    <label className="flex items-center gap-2" data-tip-title={help ? label : undefined} data-tip={help}>
       <span className="w-20 shrink-0 text-xs text-ink-300">{label}</span>
       <div className="flex min-w-0 flex-1 items-center gap-1">{children}</div>
     </label>
@@ -117,7 +169,7 @@ function TimeField({ value, onChange, now }: { value: number; onChange: (v: numb
         }}
         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
       />
-      <button type="button" title="Set to playhead" className="rounded p-1 text-ink-300 hover:bg-ink-700 hover:text-white" onClick={() => onChange(round3(now))}>
+      <button type="button" data-tip="Set this time to the playhead position (the red line)." className="rounded p-1 text-ink-300 hover:bg-ink-700 hover:text-white" onClick={() => onChange(round3(now))}>
         <Clock size={14} />
       </button>
     </>
@@ -142,18 +194,19 @@ function ColorField({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-function DangerButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+function DangerButton({ onClick, children, tip = "Remove this item (Delete key). Ctrl+Z brings it back." }: { onClick: () => void; children: React.ReactNode; tip?: string }) {
   return (
-    <button type="button" onClick={onClick} className="flex items-center gap-1 rounded border border-red-900 px-2 py-1 text-xs text-red-300 hover:bg-red-950">
+    <button type="button" data-tip={tip} onClick={onClick} className="flex items-center gap-1 rounded border border-red-900 px-2 py-1 text-xs text-red-300 hover:bg-red-950">
       {children}
     </button>
   );
 }
 
-function SmallButton({ onClick, children, active }: { onClick: () => void; children: React.ReactNode; active?: boolean }) {
+function SmallButton({ onClick, children, active, tip }: { onClick: () => void; children: React.ReactNode; active?: boolean; tip?: string }) {
   return (
     <button
       type="button"
+      data-tip={tip}
       onClick={onClick}
       className={`flex items-center gap-1 rounded border px-2 py-1 text-xs ${active ? "border-accent bg-accent/20 text-white" : "border-ink-600 text-ink-200 hover:bg-ink-700"}`}
     >
@@ -227,7 +280,7 @@ function RegionPanel({ edits, update, id, currentTime, setSelection }: Inspector
       <Section title={title}>
         <div className="flex gap-1">
           {(["blur", "pixelate", "box"] as RegionType[]).map((t) => (
-            <SmallButton key={t} active={r.type === t} onClick={() => set({ type: t }, "type")}>
+            <SmallButton key={t} active={r.type === t} tip={{ blur: "Switch to a soft blur.", pixelate: "Switch to big square blocks (mosaic).", box: "Switch to a solid color box." }[t]} onClick={() => set({ type: t }, "type")}>
               {t[0].toUpperCase() + t.slice(1)}
             </SmallButton>
           ))}
@@ -252,7 +305,7 @@ function RegionPanel({ edits, update, id, currentTime, setSelection }: Inspector
         <TimeRows start={r.start} end={r.end} set={set} now={currentTime} duration={edits.source.duration} />
       </Section>
       <div className="flex gap-2">
-        <SmallButton
+        <SmallButton tip="Make a copy of this area with the same position and time, e.g. to cover a second face."
           onClick={() => {
             const copy = { ...r, id: newId(r.type) };
             update((d) => ({ ...d, regions: [...d.regions, copy] }));
@@ -342,7 +395,7 @@ function ImagePanel({ edits, update, id, currentTime, setSelection }: InspectorP
             ["Bottom left", 0.03, 0.85],
             ["Bottom right", 1 - img.w - 0.03, 0.85],
           ].map(([label, x, y]) => (
-            <SmallButton key={label as string} onClick={() => set({ x: round3(x as number), y: y as number }, "corner")}>
+            <SmallButton key={label as string} tip={`Move the image to the ${(label as string).toLowerCase()} corner.`} onClick={() => set({ x: round3(x as number), y: y as number }, "corner")}>
               {label}
             </SmallButton>
           ))}
@@ -382,7 +435,7 @@ function CutPanel({ edits, update, id, currentTime, setSelection }: InspectorPro
         <p className="text-xs text-ink-400">This range is removed from the export. Turn on “Skip cuts” under the video to preview without it.</p>
         <TimeRows start={c.start} end={c.end} set={set} now={currentTime} duration={edits.source.duration} />
       </Section>
-      <DangerButton
+      <DangerButton tip="Delete this cut so the part stays in the export (Delete key). Ctrl+Z undoes it."
         onClick={() => {
           remove();
           setSelection(null);
@@ -408,6 +461,7 @@ function CropPanel({ edits, update, cropAspect, setCropAspect, setSelection }: I
           {CROP_ASPECTS.map((a) => (
             <SmallButton
               key={a.id}
+              tip={a.ratio ? `Crop to ${a.label}${a.id === "9:16" ? " — vertical, for Reels / Shorts / TikTok" : a.id === "1:1" ? " — square" : a.id === "4:5" ? " — Instagram feed portrait" : " — normal widescreen"}. The largest frame of that shape is centered; drag it on the video.` : "Any shape: drag the frame's edges freely."}
               active={cropAspect === a.id}
               onClick={() => {
                 setCropAspect(a.id);
@@ -426,7 +480,7 @@ function CropPanel({ edits, update, cropAspect, setCropAspect, setSelection }: I
         )}
       </Section>
       {crop && (
-        <DangerButton
+        <DangerButton tip="Go back to the full picture, no crop."
           onClick={() => {
             update((d) => ({ ...d, crop: null }));
             setSelection(null);
@@ -534,7 +588,7 @@ function ProjectPanel({ edits, update, uploadAsset }: InspectorProps) {
                 }
               }}
             />
-            <SmallButton onClick={() => fileRef.current?.click()}>
+            <SmallButton tip="Choose a music file from your computer. It is copied into this project's assets folder and starts at the beginning of the exported video." onClick={() => fileRef.current?.click()}>
               <Upload size={12} /> {busy ? "Uploading…" : "Add music (MP3, WAV, M4A…)"}
             </SmallButton>
           </>

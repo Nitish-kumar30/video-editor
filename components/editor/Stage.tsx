@@ -8,7 +8,7 @@
  * All positions are normalized 0–1 (see lib/schema.ts), so the preview is size-independent.
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { newId, round3, clamp, type Edits, type Region, type TextItem, type ImageItem } from "@/lib/schema";
+import { newId, round3, clamp, formatTime, type Edits, type Region, type TextItem, type ImageItem } from "@/lib/schema";
 import { blurRadii, pixelBlock, textMetrics, FONT_LINE_HEIGHT } from "@/lib/render";
 import type { CropAspect, Selection, Tool, UpdateEdits } from "./types";
 import { CROP_ASPECTS } from "./types";
@@ -228,6 +228,20 @@ export default function Stage(props: StageProps) {
     height: r.h * box.h,
   });
 
+  // Hover help (components/HoverTips.tsx) for the video area, depending on the tool.
+  const STAGE_TIPS: Record<Tool, string> = {
+    select:
+      "This is a live preview of your edit — the export will look the same.\nClick an item to select it, drag to move it. Click empty space to deselect and see the project settings on the right.",
+    blur: "Drag a rectangle over the area to blur. Press Esc to cancel.",
+    pixelate: "Drag a rectangle over the area to pixelate. Press Esc to cancel.",
+    box: "Drag a rectangle over the area to cover with a solid box. Press Esc to cancel.",
+    text: "Click where the text should start. Press Esc to cancel.",
+    image: "",
+    crop: "Everything outside the bright frame is cut away in the export. Drag the frame to move it and the white squares to resize it. Pick a shape (9:16, 1:1…) on the right.",
+  };
+  const timeRange = (s: number, e: number) => `${formatTime(s, 1)} – ${formatTime(e, 1)}`;
+  const REGION_NAMES = { blur: "Blur", pixelate: "Pixelate", box: "Box" };
+
   const fileUrl = (f: string) => `/api/projects/${projectId}/file/${f.split("/").map(encodeURIComponent).join("/")}`;
   const cursor = tool === "select" ? "default" : tool === "text" ? "text" : "crosshair";
 
@@ -247,6 +261,8 @@ export default function Stage(props: StageProps) {
           className="absolute inset-0 select-none overflow-hidden"
           style={{ cursor, touchAction: "none" }}
           onPointerDown={onOverlayDown}
+          data-tip-title="Video preview"
+          data-tip={STAGE_TIPS[tool]}
         >
           {/* Regions */}
           {edits.regions.map((r) => {
@@ -268,13 +284,19 @@ export default function Stage(props: StageProps) {
                 style={{ ...px(r), opacity: op, pointerEvents: canEdit ? "auto" : "none", cursor: canEdit ? "move" : undefined }}
                 className={sel ? "outline-2 outline-accent" : "outline-1 outline-dashed outline-white/40"}
                 onPointerDown={(e) => canEdit && e.button === 0 && startMoveRegion(e, r)}
+                data-tip-title={`${REGION_NAMES[r.type]}${r.label ? ` — ${r.label}` : ""} · ${timeRange(r.start, r.end)}`}
+                data-tip={
+                  r.type === "box"
+                    ? "Covers this area with a solid color during its time range. Drag to move; select it and drag the white squares to resize."
+                    : `${r.type === "blur" ? "Blurs" : "Pixelates"} this area during its time range (see its bar on the timeline). Drag to move; select it and drag the white squares to resize. Strength is on the right.`
+                }
               >
                 {fill}
                 {r.label && <span className="absolute -top-5 left-0 rounded bg-black/70 px-1 text-[10px] text-white">{r.label}</span>}
                 {sel &&
                   canEdit &&
                   ALL_HANDLES.map((h) => (
-                    <div key={h} style={handleStyle(h)} className="rounded-sm border border-accent bg-white" onPointerDown={(e) => startResizeRegion(e, r, h)} />
+                    <div key={h} style={handleStyle(h)} className="rounded-sm border border-accent bg-white" data-tip="Drag to resize." onPointerDown={(e) => startResizeRegion(e, r, h)} />
                   ))}
               </div>
             );
@@ -307,9 +329,11 @@ export default function Stage(props: StageProps) {
                   cursor: canEdit ? "move" : undefined,
                 }}
                 onPointerDown={(e) => canEdit && e.button === 0 && startMovePoint(e, "text", tx)}
+                data-tip-title={`Text · ${timeRange(tx.start, tx.end)}`}
+                data-tip="Drag to move. Select it to change the words, size and colors on the right; drag the white corner square to make it bigger or smaller."
               >
                 {tx.text || " "}
-                {sel && canEdit && <div style={handleStyle("se")} className="rounded-sm border border-accent bg-white" title="Drag to resize" onPointerDown={(e) => startScaleText(e, tx)} />}
+                {sel && canEdit && <div style={handleStyle("se")} className="rounded-sm border border-accent bg-white" data-tip="Drag down to make the text bigger, up to make it smaller." onPointerDown={(e) => startScaleText(e, tx)} />}
               </div>
             );
           })}
@@ -325,10 +349,12 @@ export default function Stage(props: StageProps) {
                 className={sel ? "outline-2 outline-accent" : ""}
                 style={{ position: "absolute", left: img.x * box.w, top: img.y * box.h, width: img.w * box.w, pointerEvents: canEdit ? "auto" : "none", cursor: canEdit ? "move" : undefined }}
                 onPointerDown={(e) => canEdit && e.button === 0 && startMovePoint(e, "image", img)}
+                data-tip-title={`Logo / image · ${timeRange(img.start, img.end)}`}
+                data-tip="Drag to move. Select it to change size, opacity and corner position on the right; drag the white corner square to resize."
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={fileUrl(img.file)} alt="" draggable={false} className="block w-full" style={{ opacity: img.opacity * op }} />
-                {sel && canEdit && <div style={handleStyle("se")} className="rounded-sm border border-accent bg-white" title="Drag to resize" onPointerDown={(e) => startScaleImage(e, img)} />}
+                {sel && canEdit && <div style={handleStyle("se")} className="rounded-sm border border-accent bg-white" data-tip="Drag right to make it bigger, left to make it smaller." onPointerDown={(e) => startScaleImage(e, img)} />}
               </div>
             );
           })}
@@ -344,6 +370,8 @@ export default function Stage(props: StageProps) {
               }}
               className={cropActive ? "outline-2 outline-amber-400" : "outline-1 outline-white/30"}
               onPointerDown={(e) => cropActive && e.button === 0 && startMoveCrop(e)}
+              data-tip-title="Crop frame"
+              data-tip={STAGE_TIPS.crop}
             >
               {cropActive && (
                 <>
@@ -353,7 +381,7 @@ export default function Stage(props: StageProps) {
                     ))}
                   </div>
                   {(cropRatio ? CORNERS : ALL_HANDLES).map((h) => (
-                    <div key={h} style={handleStyle(h)} className="rounded-sm border border-amber-500 bg-white" onPointerDown={(e) => startResizeCrop(e, h)} />
+                    <div key={h} style={handleStyle(h)} className="rounded-sm border border-amber-500 bg-white" data-tip="Drag to resize the crop." onPointerDown={(e) => startResizeCrop(e, h)} />
                   ))}
                   <span className="pointer-events-none absolute -top-5 left-0 rounded bg-amber-500 px-1 text-[10px] font-medium text-black">
                     Crop {Math.round(edits.crop.w * W)}×{Math.round(edits.crop.h * H)}
